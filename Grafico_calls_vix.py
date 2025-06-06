@@ -1,46 +1,53 @@
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
-import datetime
+from datetime import datetime
+import pytz
 
-# Parâmetros
-ticker = "^VIX"
+def mercado_aberto():
+    agora = datetime.now(pytz.timezone("US/Eastern"))
+    return agora.weekday() < 5 and agora.hour >= 9 and (agora.hour < 16 or (agora.hour == 16 and agora.minute == 0))
+
+vix = yf.Ticker("^VIX")
 strikes = list(range(20, 31)) + [35, 40, 45]
-end_date = datetime.date(2026, 2, 28)
+vencimentos = [d for d in vix.options if '2026-03' not in d]
+market_open = mercado_aberto()
 
-# Objeto do ativo
-vix = yf.Ticker(ticker)
+def coletar_opcoes(tipo='call'):
+    dados = []
+    for venc in vencimentos:
+        opt_chain = vix.option_chain(venc)
+        opcoes = opt_chain.calls if tipo == 'call' else opt_chain.puts
+        for _, row in opcoes.iterrows():
+            if int(row['strike']) in strikes:
+                if market_open and row['bid'] > 0 and row['ask'] > 0:
+                    preco = (row['bid'] + row['ask']) / 2
+                else:
+                    preco = row['lastPrice']
+                dados.append({
+                    'vencimento': venc,
+                    'strike': int(row['strike']),
+                    'preco': preco
+                })
+    return pd.DataFrame(dados)
 
-# Vencimentos disponíveis
-expiration_dates = vix.options
-expiration_dates = [date for date in expiration_dates if datetime.datetime.strptime(date, '%Y-%m-%d').date() <= end_date]
+# Gráficos
+def plotar(df, tipo='CALL'):
+    plt.figure(figsize=(14, 6))
+    for strike in sorted(df['strike'].unique()):
+        sub = df[df['strike'] == strike]
+        plt.plot(sub['vencimento'], sub['preco'], marker='o', label=f'Strike {strike}')
+    plt.xticks(rotation=45)
+    plt.title(f'VIX - Curva de Volatilidade - {tipo}s')
+    plt.xlabel('Vencimento')
+    plt.ylabel('Preço da Opção')
+    plt.legend()
+    plt.tight_layout()
+    plt.grid(True)
+    plt.show()
 
-# Coleta dos dados
-options_data = []
+df_calls = coletar_opcoes('call')
+plotar(df_calls, 'CALL')
 
-for exp in expiration_dates:
-    opt = vix.option_chain(exp)
-    calls = opt.calls
-    calls_filtered = calls[calls['strike'].isin(strikes)]
-    for _, row in calls_filtered.iterrows():
-        options_data.append({
-            'expiration': exp,
-            'strike': row['strike'],
-            'lastPrice': row['lastPrice']
-        })
-
-df = pd.DataFrame(options_data)
-df['expiration'] = pd.to_datetime(df['expiration'])
-
-# Pivotar os dados para o gráfico
-pivot_df = df.pivot(index='expiration', columns='strike', values='lastPrice')
-
-# Plotar
-pivot_df.plot(marker='o', figsize=(14, 6))
-plt.title("Preços das Calls do VIX por Strike e Vencimento")
-plt.xlabel("Vencimento")
-plt.ylabel("Preço da Call")
-plt.grid(True)
-plt.legend(title="Strike")
-plt.tight_layout()
-plt.show()
+df_puts = coletar_opcoes('put')
+plotar(df_puts, 'PUT')
