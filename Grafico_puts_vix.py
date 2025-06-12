@@ -5,7 +5,7 @@ import datetime
 
 # Parâmetros
 ticker = "^VIX"
-strikes = list(range(15, 27)) #+ [35, 40, 45]
+strikes = list(range(14, 21)) #+ [35, 40, 45]
 end_date = datetime.date(2026, 2, 28)
 
 # Objeto do ativo
