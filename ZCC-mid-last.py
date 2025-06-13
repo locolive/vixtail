@@ -75,5 +75,5 @@ def buscar_spreads_credito(strike_range=range(15, 25), tipo='put', dias_minimos=
     return df.sort_values(by='Valor (Mid)', ascending=True)
 
 # Exemplo de uso
-resultado = buscar_spreads_credito(strike_range=range(15, 21), tipo='put')
+resultado = buscar_spreads_credito(strike_range=range(15, 20), tipo='put')
 print(resultado)

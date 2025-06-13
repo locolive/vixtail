@@ -73,7 +73,7 @@ def buscar_calendarios_com_credito(strike_range=range(15, 25), tipo='put', metod
 
 # Exemplo de uso:
 resultado = buscar_calendarios_com_credito(
-    strike_range=range(15, 21),
+    strike_range=range(15, 25),
     tipo='put',
     metodo_preco='last',  # ou 'last' ou 'mid'
     dias_minimos=30,

@@ -9,7 +9,7 @@ def mercado_aberto():
     return agora.weekday() < 5 and agora.hour >= 9 and (agora.hour < 16 or (agora.hour == 16 and agora.minute == 0))
 
 vix = yf.Ticker("^VIX")
-strikes = list(range(20, 31)) + [35, 40, 45]
+strikes = list(range(15, 25)) #+ [35, 40, 45]
 vencimentos = [d for d in vix.options if '2026-03' not in d]
 market_open = mercado_aberto()
 
