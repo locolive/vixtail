@@ -1,14 +1,23 @@
 from ib_insync import *
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 import math
 import os
 from datetime import datetime
+import logging
+from functools import lru_cache
+import matplotlib.pyplot as plt
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Conectar à TWS (somente leitura)
 ib = IB()
-ib.connect('127.0.0.1', 7497, clientId=999, readonly=True)
+try:
+    ib.connect('127.0.0.1', 7497, clientId=999, readonly=True)
+except Exception as e:
+    logging.error(f"Falha na conexão com TWS: {e}")
+    exit(1)
 
 # Configurações
 strike_range = range(15, 21)
@@ -26,15 +35,24 @@ csv_path = r"E:\GitHub\vixtail\vix_spreads_data.csv"
 # Garantir que o diretório existe
 os.makedirs(output_img_dir, exist_ok=True)
 
-# Função auxiliar para buscar bid/ask
+# Cache local para a sessão
+@lru_cache(maxsize=128)
 def get_bid_ask(strike, expiry):
-    contract = Option('VIX', expiry, strike, right, exchange)
-    details = ib.reqContractDetails(contract)
-    if not details:
+    try:
+        contract = Option('VIX', expiry, strike, right, exchange)
+        details = ib.reqContractDetails(contract)
+        if not details:
+            logging.warning(f"Contrato não encontrado: Strike {strike}, Expiry {expiry}")
+            return None, None
+        ticker = ib.reqMktData(details[0].contract, '', False, False)
+        ib.waitOnUpdate(timeout=2)  # Ajuste dinâmico de espera
+        if ticker.bid is None or ticker.ask is None:
+            logging.warning(f"Dados ausentes para: Strike {strike}, Expiry {expiry}")
+            return None, None
+        return ticker.bid, ticker.ask
+    except Exception as e:
+        logging.error(f"Erro ao buscar cotações para {strike}, {expiry}: {e}")
         return None, None
-    ticker = ib.reqMktData(details[0].contract, '', False, False)
-    ib.sleep(1)
-    return ticker.bid, ticker.ask
 
 # Construção das matrizes
 matrizes = {}
